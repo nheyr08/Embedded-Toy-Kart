@@ -1,0 +1,442 @@
+
+from numpy.core.fromnumeric import mean
+import pybullet as p
+import pybullet_data
+from time import sleep
+import math
+from numpy import linalg ,dot,sqrt
+from scipy.spatial.transform import Rotation as R
+import gym
+import itertools
+import matplotlib.style
+import numpy as np
+import pandas as pd
+import sys
+import matplotlib.pyplot as plt
+
+
+#_________This class perform some automatic actions_______-
+class Actions():
+    def __init__(self):
+        self.mean = 0
+        self.m=0
+        self.N=0.0
+# Choose a random action
+    def choose(self):
+         return np.random.randn() + self.m
+
+    # Update the action-value estimate
+    def update(self, x):
+        self.N += 1
+        self.mean = (1 - 1.0 / self.N)*self.mean + 1.0 / self.N * x
+
+
+    def run_experiment(self,m1, m2, m3, m4, eps,N):
+        
+        #self.data = np.empty(N)
+       # actions = [self.Action(m1), self.Action(m2), self.Action(m3),self.Action(m4)]
+        while True:
+            self.Action(1)
+
+    ''' for i in range(N):
+            sleep(2)
+            # epsilon greedy
+            p = np.random.random()
+            if p < eps:
+                j = np.random.choice(actions)
+            else:
+                #state exist
+                print(actions)
+                j = np.argmax([np.mean(a) for a in actions])
+                print("Im j: ",j)
+        
+            x = actions[j]
+            self.choose()
+            print("Action ",actions[j])
+            self.update(x)
+            # for the plot
+            self.data[i] = x
+        cumulative_average = np.cumsum(self.data) / (np.arange(N) + 1)
+
+        # plot moving average ctr
+        plt.plot(cumulative_average)
+        plt.plot(np.ones(N)*m1)
+        plt.plot(np.ones(N)*m2)
+        plt.plot(np.ones(N)*m3)
+        plt.plot(np.ones(N)* m4)
+        plt.xscale('log')
+        plt.show()
+
+        for a in self.actions:
+            print(np.mean(a))
+
+        return cumulative_average
+'''
+    def Action(self,m):
+        reward=0
+        if m==1.0:
+           reward=Up(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+        elif m==2.0:
+            reward=Right(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+        elif m==3.0:
+            reward=Left(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+        elif m==4.0:
+            reward=UP_and_Left(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+        elif m==5.0:
+            reward=UP_and_Right(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+        elif m==6.0:
+            Down(self.robot_id,self.maxV,self.maxF,self.t,self.debug_text_id,self.textColor,self.reward,self.N)
+    # update robot position
+        location, orientation = p.getBasePositionAndOrientation(self.robot_id)
+        #print("p", location)
+        #print("o",  p.getEulerFromQuaternion(orientation))
+        yaw = p.getAxisAngleFromQuaternion(orientation)[1]
+        # update camera position to follow robot
+        p.resetDebugVisualizerCamera(
+            cameraDistance=5,
+            cameraYaw=60,
+            cameraPitch=-30,
+            cameraTargetPosition=location,
+        )
+
+        axis = p.getMatrixFromQuaternion(orientation)[0:3:]
+        axis = axis[0:2]/sqrt(axis[0]**2 + axis[1]**2)
+        begins, _ = p.getBasePositionAndOrientation(self.robot_id)
+        rayFroms = [[begins[0], begins[1], begins[2]+0.3] for _ in range(self.rayNum+1)]
+        rayTos = [
+            [
+                begins[0] + self.rayLength * (math.cos(2 * math.pi * float(i) / self.rayNum)*axis[0] + axis[1]*math.sin(2 * math.pi * float(i) / self.rayNum)),
+                begins[1] + self.rayLength * (math.sin(2 * math.pi * float(i) / self.rayNum)*axis[0] - axis[1]*math.cos(2 * math.pi * float(i) / self.rayNum)),
+                begins[2]+0.3
+            ] 
+        for i in range(self.rayNum)]
+        # 0 is front rotate counter-clockwise
+        
+        rayTos.append([begins[0]+axis[0]*10,begins[1]-axis[1]*10,begins[2]+0.3])
+        # 调用激光探测函数
+        results = p.rayTestBatch(rayFroms, rayTos)
+        
+        # 染色前清楚标记
+        p.removeAllUserDebugItems()
+        '''
+        # 根据results结果给激光染色
+        for index, result in enumerate(results):
+            if result[0] == -1:
+                p.addUserDebugLine(rayFroms[index], rayTos[index], missRayColor)
+            else:
+                p.addUserDebugLine(rayFroms[index], rayTos[index], hitRayColor)
+        '''
+        index = 0
+        p.removeAllUserDebugItems()
+        p.addUserDebugLine(rayFroms[index], rayTos[index], self.hitRayColor)
+        print(results[index][3])
+
+        rays_to_wall = [1, 2, 3, 5, 6, 7]
+        range_to_wall = [sqrt((results[i][0]-location[0])**2 + (results[i][1]-location[1])**2) for i in rays_to_wall]
+        print("Im reward",reward)
+        return reward
+        #print(range_to_wall)
+
+
+#___________Move_Functions____________________________________________#
+
+def UP_and_Left(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+            reward=reward+2
+            p.setJointMotorControlArray(   # 2,3为右 6,7为左 24 35
+                bodyUniqueId=robot_id,
+                jointIndices=[3, 5],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV, maxV],
+                forces=[maxF, maxF]
+            )
+            p.setJointMotorControlArray(
+                bodyUniqueId=robot_id,
+                jointIndices=[2, 4],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV / t, maxV / t],
+                forces=[maxF / t, maxF / t]
+            )
+            debug_text_id = p.addUserDebugText(
+                text="up + left",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            )
+            return reward
+
+def UP_and_Right(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+                reward=reward+1
+                p.setJointMotorControlArray(   # 2,3为右 6,7为左
+                bodyUniqueId=robot_id,
+                jointIndices=[2, 4],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV, maxV],
+                forces=[maxF, maxF]
+            )
+                p.setJointMotorControlArray(
+                bodyUniqueId=robot_id,
+                jointIndices=[3, 5],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV / t, maxV / t],
+                forces=[maxF / t, maxF / t]
+            )
+                debug_text_id = p.addUserDebugText(
+                text="up + right",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            ) 
+                return reward
+
+def Up(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+            reward=reward+5
+            p.setJointMotorControlArray(   
+                bodyUniqueId=robot_id,
+                jointIndices=[2, 4, 3, 5],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV, maxV, maxV, maxV],
+                forces=[maxF, maxF, maxF, maxF]
+            )
+            debug_text_id = p.addUserDebugText(
+                text="up",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            )
+            return reward
+
+def Down(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+                reward=reward-3
+                p.setJointMotorControlArray(   
+                bodyUniqueId=robot_id,
+                jointIndices=[2, 4, 3, 5],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[-maxV / t, -maxV / t, -maxV / t, -maxV / t],
+                forces=[maxF / t, maxF / t, maxF / t, maxF / t]
+            )
+                debug_text_id = p.addUserDebugText(
+                text="down",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            )
+                return reward
+
+def Left(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+            reward=reward+1
+            p.setJointMotorControlArray(   
+                bodyUniqueId=robot_id,
+                jointIndices=[3, 5, 2, 4],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[maxV / t, maxV / t, -maxV / t, -maxV / t],
+                forces=[maxF / t, maxF / t, maxF / t, maxF / t]
+            )
+            debug_text_id = p.addUserDebugText(
+                text="left",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            )
+            return reward
+
+def Right(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+                reward=reward+1
+                p.setJointMotorControlArray(   
+                bodyUniqueId=robot_id,
+                jointIndices=[3, 5, 2, 4],
+                controlMode=p.VELOCITY_CONTROL,
+                targetVelocities=[-maxV / t, -maxV / t, maxV / t, maxV / t],
+                forces=[maxF / t, maxF / t, maxF / t, maxF / t]
+            )
+                debug_text_id = p.addUserDebugText(
+                text="right",
+                textPosition=[0, 0, 2],
+                textColorRGB=textColor,
+                textSize=2.5,
+                replaceItemUniqueId=debug_text_id
+            )
+                return reward
+            
+def OTHER_Actions(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N):
+        reward=reward-7
+        speed = linalg.norm(p.getBaseVelocity(robot_id)[1])
+       # _, ort = p.getBasePositionAndOrientation(robot_id)
+        
+        #print(R.from_quat(ort).as_rotvec())
+        #print(dot(R.from_quat(ort).as_rotvec(),p.getBaseVelocity(robot_id)[1]))
+        rho = -10  ## Don't know how it works for backing
+        p.setJointMotorControlArray(   
+            bodyUniqueId=robot_id,
+            jointIndices=[2, 4, 3, 5],
+            controlMode=p.VELOCITY_CONTROL,
+            targetVelocities=[0, 0, 0, 0],
+            forces=[-rho*speed, -rho*speed, -rho*speed, -rho*speed]
+        )
+        debug_text_id = p.addUserDebugText(
+            text="",
+            textPosition=[0, 0, 2],
+            textColorRGB=textColor,
+            textSize=2.5,
+            replaceItemUniqueId=debug_text_id
+        )
+        return reward
+
+def main():
+    use_gui = True
+    if use_gui:
+        cid = p.connect(p.GUI)
+    else: 
+        cid = p.connect(p.DIRECT)    
+    
+#____________________VARIABLE DECLARATION______________________________#
+
+    p.configureDebugVisualizer(p.COV_ENABLE_TINY_RENDERER, 0)
+    p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+
+    p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    plane_id = p.loadSDF("world/racetrack.world", useMaximalCoordinates=True)
+    robot_id = p.loadURDF("husky/husky.urdf", basePosition=[0, 0, 0.5], useMaximalCoordinates=False)
+    #planeId = p.loadSDF("world_formulaPi/race2.sdf")
+
+    p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
+    p.setGravity(0, 0, -10)
+    p.setRealTimeSimulation(1)
+
+    textColor = [1, 1, 0]      
+    # 先设置一个空内容
+    debug_text_id = p.addUserDebugText(
+        text='Wlcm press: "S" start "F" AI',
+        textPosition=[-1, 0, 2],
+        textColorRGB=textColor,
+        textSize=2.5
+    )
+    
+    maxV = 30
+    maxF = 30
+
+    useDebugLine = False 
+    hitRayColor = [0, 1, 0]
+    missRayColor = [1, 0, 0]
+
+    rayLength = 8          # 激光长度
+    rayNum = 8             # 激光数量
+
+
+    t = 2   # 左前或右前的轮子的速度差的倍数
+    reward=0
+    #___________________________Connect to Class_______________________________#
+    rodger=Actions()
+    rodger.robot_id=robot_id
+    rodger.plane_id=plane_id
+    rodger.textColor=textColor
+    rodger.debug_text_id=debug_text_id
+    rodger.maxV=maxV
+    rodger.maxF=maxF
+    rodger.t=t
+    rodger.reward=reward
+    rodger.useDebugLine = useDebugLine 
+    rodger.hitRayColor = hitRayColor
+    rodger.missRayColor = missRayColor
+
+    rodger.rayLength = rayLength          # 激光长度
+    rodger.rayNum = rayNum   
+
+
+
+    #########################################################################
+    # WELCOME MESSAGE( FOR DEBUGGING )
+    while True:
+        print("Please enter n for user play or a to see automode.'")
+        s=str(input())
+        if s=='n':
+            break
+        elif s=='a':
+            #automode
+            c_05 = rodger.run_experiment(1.0, 2.0, 3.0, 4.0, 0.05,100000)
+            c_01 = rodger.run_experiment(1.0, 2.0, 3.0, 4.0, 0.01,100000)
+            print(c_05)
+            print(c_01)
+            False 
+        else:
+            break
+    N=0
+  
+    #________________________________________________________________#
+    # THIS PART IS FOR USER CONTROL 
+    while True:
+        p.stepSimulation()
+        key_dict = p.getKeyboardEvents()
+        
+        if len(key_dict):
+            if p.B3G_UP_ARROW in key_dict and p.B3G_LEFT_ARROW in key_dict: # 左前
+               UP_and_Left(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+            elif p.B3G_UP_ARROW in key_dict and p.B3G_RIGHT_ARROW in key_dict:  # 右前
+                UP_and_Right(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+
+            elif p.B3G_UP_ARROW in key_dict:        # 向前
+                Up(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+
+            elif p.B3G_DOWN_ARROW in key_dict:        # 向后
+                Down(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+            elif p.B3G_LEFT_ARROW in key_dict:        # 原地左转
+                Left(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+            elif p.B3G_RIGHT_ARROW in key_dict:        # 原地右转
+              Right(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+
+        else:           # 没有按键，则停下
+           # speed = linalg.norm(p.getBaseVelocity(robot_id)[1])
+          #  _, ort = p.getBasePositionAndOrientation(robot_id)
+            OTHER_Actions(robot_id,maxV,maxF,t,debug_text_id,textColor,reward,N)
+
+        #_______update robot position____________
+        location, orientation = p.getBasePositionAndOrientation(robot_id)
+        #print("p", location)
+        #print("o",  p.getEulerFromQuaternion(orientation))
+        yaw = p.getAxisAngleFromQuaternion(orientation)[1]
+        # update camera position to follow robot
+        p.resetDebugVisualizerCamera(
+            cameraDistance=5,
+            cameraYaw=60,
+            cameraPitch=-30,
+            cameraTargetPosition=location,
+        )
+
+        axis = p.getMatrixFromQuaternion(orientation)[0:3:]
+        axis = axis[0:2]/sqrt(axis[0]**2 + axis[1]**2)
+        begins, _ = p.getBasePositionAndOrientation(robot_id)
+        rayFroms = [[begins[0], begins[1], begins[2]+0.3] for _ in range(rayNum+1)]
+        rayTos = [
+            [
+                begins[0] + rayLength * (math.cos(2 * math.pi * float(i) / rayNum)*axis[0] + axis[1]*math.sin(2 * math.pi * float(i) / rayNum)),
+                begins[1] + rayLength * (math.sin(2 * math.pi * float(i) / rayNum)*axis[0] - axis[1]*math.cos(2 * math.pi * float(i) / rayNum)),
+                begins[2]+0.3
+            ] 
+        for i in range(rayNum)]
+        # 0 is front rotate counter-clockwise
+        
+        rayTos.append([begins[0]+axis[0]*10,begins[1]-axis[1]*10,begins[2]+0.3])
+        # 调用激光探测函数
+        results = p.rayTestBatch(rayFroms, rayTos)
+        
+        # 染色前清楚标记
+        p.removeAllUserDebugItems()
+        index = 0
+        p.removeAllUserDebugItems()
+        p.addUserDebugLine(rayFroms[index], rayTos[index], hitRayColor)
+        print(results[index][3])
+
+        rays_to_wall = [1, 2, 3, 5, 6, 7]
+        range_to_wall = [sqrt((results[i][0]-location[0])**2 + (results[i][1]-location[1])**2) for i in rays_to_wall]
+        #print(range_to_wall)
+
+
+
+
+
+main()

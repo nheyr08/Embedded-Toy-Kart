@@ -1,4 +1,4 @@
-# Embedded-Toy-Kart Group Project (Three people)
+# Embedded-Toy-Kart
 
 ###### tags: `2021Fall` `reinforcement learning`
 

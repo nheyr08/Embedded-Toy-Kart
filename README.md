@@ -2,9 +2,6 @@
 
 ###### tags: `2021Fall` `reinforcement learning`
 
-We are group four
-https://docs.google.com/spreadsheets/d/1gxbtw83dR9U-LdgGWI28NNOoOmxj2oEP/edit#gid=842669492
-
 Ai kart is a project that try to implement a self driving AI kart game.
 This file is a result of the brainstorming behind the group semester project.
 

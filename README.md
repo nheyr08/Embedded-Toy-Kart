@@ -2,40 +2,36 @@
 
 ###### tags: `2021Fall` `reinforcement learning`
 
-Ai kart is a project that try to implement a self driving AI kart game.
-This file is a result of the brainstorming behind the group semester project.
+This project is the implementation of a self-driving AI kart based on reinforcement learning and the PID algorithm. Our model, on a Jetson Nano performs directional and navigates the environment for optimal route prediction. The project deals simultaneously with complex environmental dynamics and a complex policy, derived from streamed frame pixels.
 
-# Issues
 ## How to build a model for simulation
-Gazebo or unity -> 10/27 Gazebo
-- [x] done
+Gazebo or unity -> 2021/10/27 Gazebo
+- [x] implemented
 
-1. Learning curve is lower
-2. We only need simple geometric shape for the scence. Our primary concern is the joints and control etc.
-
-    # Steps    
+# Steps    
 ## Algorithm to train the model to play the game:
-reinforcement.
-## Find out how to interact with the computer and the board
-Sending Keystrokes to a PC using a raspberry pi/ Jetson
-## find target: KSP, track..., what is the game the model will play
-car race, landing ...
-
+reinforcement learning
+## Hardware used:
+Jetson Nano,
+Windows PC I7
+## interact with the computer and the JetsonNano board
+Model inference on Jetson, sends Keystrokes to PC Virtual Interface.
+##  Target: KSP, track..., game the model will play
+- [x] landing
+- [x] virtual track
+- [x] generated environment
 # Presentation of Ideas
 * Initiative
-> Want to do embedded control but have no hardware, want to play multiplayer games but have no opponents - 10/27
+>Do embedded control using limited hardware on an edge device, take part in multiplayer games against other opponents - 2021/10/27
 
-* info
-5 min presentation
-3 min QA sesssion
-
-11/10 or 11/17
-
-# Notes
-## Environment
-Maybe use Ignition Fortress on both side
-Ignition Gazebo: new, more suitable for RL, but lack of some feature and tutorial 
-### Virtual
+# Notes for the Embedded Toy Kart
+## Overview
+The Embedded Toy Kart project implements a self-driving AI kart model using reinforcement learning (RL) and a PID (Proportional-Integral-Derivative) control algorithm. This project aims to create a simulation environment where the AI can learn to navigate and control a kart effectively.
+## Project Goals
+Develop a self-driving kart using RL techniques.
+Implement control algorithms to manage kart dynamics.
+Create a simulation environment suitable for training and testing the model.
+### Simulation Environment Setup
 - Robostack 
     1. cross-plateform ROS maintained in conda
     2. [Document](https://robostack.github.io/noetic.html), [Github](https://github.com/RoboStack/ros-noetic)
@@ -121,14 +117,14 @@ ___________________
 
 
 ## Step towards self driving car/robot
- 
+#### Update 2021/10/25
 This [method](https://github.com/harsha-20/Autopilot-Steering-Wheel-Simulation) uses CNN to map the raw pixels from a front-facing camera to the steering commands for a self-driving car. 
 However, since we are using pybullet, it is said somewhere in the [documentation](https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.u1jisfnt6984) that we can directly retrieve the camera output from pybullet.getCameraImage and use them for further purposes like training our model. but Im not sure if it can read through to opencv.
 
 * Our main issue now, (if are to proceed with this approach) would be to find a way to connect the pybullet camera output for our robot, to the opencv input and train our model (I also couldnt find reliable way to do this yet)
 
 
-
+#### Update 2021/10/26
 Alternatively, I noticed in the documentation that pybullet provide some reinforcement learning trick to train our model [here](https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#heading=h.wz5to0x8kqmr) still working on figuring out those.
 
 * And for the texture part I found out that it was not possible to do the texture wrapping on a non mesh object like the car and track we had from the URDF files, the way would be to use blender or some other process, but we are not there yet.
@@ -144,28 +140,28 @@ https://m.youtube.com/playlist?list=PLzMcBGfZo4-lwGZWXz5Qgta_YNX3_vLS2
 
 # PyQt GUI interface
 - [x] Layout, second screen
-- [ ] Multithread to start the game
-- [ ] Make sure the TCP part is ok
-- [ ] Good way to quit the game
-- [ ] Speed indicator
-- [ ] Add image, video, sound etc.
-- [ ] User data storage
+- [x] Multithread to start the game
+- [x] Make sure the TCP part is ok
+- [x] Good way to quit the game
+- [x] Speed indicator
+- [x] Add image, video, sound etc.
+- [x] User data storage
 
 ### Note
 Qt Designer is platform and programming language independent. It doesn’t produce code in any particular programming language, but it creates .ui files. These files are XML files with detailed descriptions of how to generate Qt-based GUIs.
-
-Widgit bar
-Object Inspector 
-Property editor
-Action editor
-Resource browser
-signal/slot editor
+# TODO
+- [x] Widget bar
+- [x] Object Inspector 
+- [x] Property editor
+- [x] Action editor
+- [x] Resource browser
+- [x] signal/slot editor
 
 Switch between:
-Widget editing mode
-signal/slot mode
-buddies mode
-tab order
+- [x] Widget editing mode
+- [x] signal/slot mode
+- [ ] buddies mode
+- [ ] tab order
 
 pyuic5 change .ui to .py 
 keyboard accelerators
@@ -175,7 +171,7 @@ keyboard accelerators
 I suppose it's some kind of short key
 
 
-widgit send signal to slot that have event triggered
+widget sends signal to slot that have event triggered
 
 pyuic5, which is a tool included in the PyQt installation
 
@@ -195,7 +191,8 @@ Mutual exclusion is a common pattern in multithreaded programming. Access to dat
     add mutex.lock() and mutex.unlock() on each modification
 
 ### Question
-How exactly do we put our py implementation to call two window-> Answer: https://stackoverflow.com/a/13551018
+How to put our py implementation to call two window->
+Answer: https://stackoverflow.com/a/13551018 2022/10/30
 
 
 Pybullet, disable mouse picking
@@ -232,3 +229,4 @@ https://youtu.be/tF1U93I3-90
 
 --- 
 
+Potential future work is to extend the project to a multiagent real-life self driving vehicle. 
